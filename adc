@@ -1,0 +1,27 @@
+#include "config.h"
+#include "timer.h"
+#include "adc.h"
+#include "lcd.h"
+
+int main(void)
+{
+    unsigned int adcValue;
+
+    Timer0_Init();
+    LCD_Init();
+    ADC_Init();
+
+    while (1)
+    {
+        /* Read raw MCP3204 CH0 */
+        adcValue = MCP3204_Read(0);
+
+        LCD_Clear();
+
+        LCD_String("ADC:");
+
+        LCD_PrintNumber(adcValue);
+
+        Timer0_Delay_ms(500);
+    }
+}
