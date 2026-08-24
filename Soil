@@ -1,0 +1,31 @@
+unsigned int Read_SoilMoisture(void)
+{
+    unsigned int adcValue;
+    unsigned int moisture;
+
+    /* Read MCP3204 channel 2 */
+    adcValue = MCP3204_Read(SOIL_CHANNEL);
+
+    /*
+     * Soil moisture calibration
+     * Lower ADC = more moisture
+     *
+     * Water ≈ 700
+     * Air   ≈ 1100
+     */
+
+    if (adcValue <= 700)
+    {
+        moisture = 100;
+    }
+    else if (adcValue >= 1100)
+    {
+        moisture = 0;
+    }
+    else
+    {
+        moisture = ((1100 - adcValue) * 100UL) / 400UL;
+    }
+
+    return moisture;
+}
