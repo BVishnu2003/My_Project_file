@@ -1,0 +1,38 @@
+unsigned int Read_SoilMoisture(void)
+{
+    unsigned int adcValue;
+    unsigned int moisture;
+
+    adcValue = MCP3204_Read(SOIL_CHANNEL);
+
+    /*
+     * Soil sensor calibration
+     *
+     * Change these two values after testing:
+     * DRY_ADC = raw value in dry soil
+     * WET_ADC = raw value in fully wet soil
+     */
+
+    #define SOIL_DRY_ADC  1100
+    #define SOIL_WET_ADC  200
+
+    /* Very wet */
+    if (adcValue <= SOIL_WET_ADC)
+    {
+        moisture = 100;
+    }
+    /* Very dry */
+    else if (adcValue >= SOIL_DRY_ADC)
+    {
+        moisture = 0;
+    }
+    /* Between wet and dry */
+    else
+    {
+        moisture =
+            ((SOIL_DRY_ADC - adcValue) * 100UL) /
+            (SOIL_DRY_ADC - SOIL_WET_ADC);
+    }
+
+    return moisture;
+}
