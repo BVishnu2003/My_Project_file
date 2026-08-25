@@ -1,0 +1,147 @@
+#include <LPC21xx.h>
+#include "spi.h"
+
+/*
+ * LPC2129 SPI0 Connections
+ *
+ * P0.4 -> SCK0
+ * P0.5 -> MISO0
+ * P0.6 -> MOSI0
+ * P0.7 -> GPIO / CS
+ *
+ * MCP3204:
+ *
+ * CLK  <- P0.4
+ * DOUT -> P0.5
+ * DIN  <- P0.6
+ * CS   <- P0.7
+ */
+
+
+/* ---------------------------------------------------------
+   SPI Initialization
+   --------------------------------------------------------- */
+
+void SPI_Init(void)
+{
+    /*
+     * Configure P0.4, P0.5 and P0.6 as SPI0 pins.
+     *
+     * P0.4 = SCK0
+     * P0.5 = MISO0
+     * P0.6 = MOSI0
+     *
+     * P0.7 remains GPIO for MCP3204 CS.
+     */
+
+    PINSEL0 &= ~(0x00003F00);
+
+    PINSEL0 |=  (0x00001500);
+
+
+    /*
+     * Configure P0.7 as GPIO output.
+     */
+
+    IO0DIR |= (1 << 7);
+
+
+    /*
+     * MCP3204 CS is active LOW.
+     *
+     * Initially deselect ADC.
+     */
+
+    IO0SET = (1 << 7);
+
+
+    /*
+     * SPI Control Register
+     *
+     * Master mode
+     * 8-bit data
+     * CPOL = 0
+     * CPHA = 0
+     * MSB first
+     */
+
+    S0SPCR = 0x0820;
+
+
+    /*
+     * SPI clock frequency.
+     *
+     * SPI Clock = PCLK / S0SPCCR
+     *
+     * For PCLK = 60 MHz:
+     *
+     * 60 MHz / 60 = 1 MHz
+     *
+     * MCP3204 can operate at this speed.
+     */
+
+    S0SPCCR = 60;
+}
+
+
+/* ---------------------------------------------------------
+   SPI Write / Read
+   --------------------------------------------------------- */
+
+unsigned char SPI_Write(unsigned char data)
+{
+    /*
+     * Put data into SPI data register.
+     */
+
+    S0SPDR = data;
+
+
+    /*
+     * Wait until SPI transfer is complete.
+     *
+     * SPIF = bit 7 of S0SPSR.
+     */
+
+    while ((S0SPSR & 0x80) == 0)
+    {
+        /* Wait */
+    }
+
+
+    /*
+     * Return received byte.
+     */
+
+    return S0SPDR;
+}
+
+
+/* ---------------------------------------------------------
+   MCP3204 Chip Select LOW
+   --------------------------------------------------------- */
+
+void SPI_CS_Low(void)
+{
+    /*
+     * CS = 0
+     * Select MCP3204
+     */
+
+    IO0CLR = (1 << 7);
+}
+
+
+/* ---------------------------------------------------------
+   MCP3204 Chip Select HIGH
+   --------------------------------------------------------- */
+
+void SPI_CS_High(void)
+{
+    /*
+     * CS = 1
+     * Deselect MCP3204
+     */
+
+    IO0SET = (1 << 7);
+}
