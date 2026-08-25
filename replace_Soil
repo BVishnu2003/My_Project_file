@@ -1,0 +1,29 @@
+unsigned int Read_SoilMoisture(void)
+{
+    unsigned int adcValue;
+    unsigned int moisture;
+
+    adcValue = MCP3204_Read(SOIL_CHANNEL);
+
+    /*
+     * Soil sensor calibration
+     *
+     * AIR   = 299 ADC -> 0%
+     * WATER = 166 ADC -> 100%
+     */
+
+    if (adcValue >= 299)
+    {
+        moisture = 0;
+    }
+    else if (adcValue <= 166)
+    {
+        moisture = 100;
+    }
+    else
+    {
+        moisture = ((299 - adcValue) * 100UL) / 133UL;
+    }
+
+    return moisture;
+}
