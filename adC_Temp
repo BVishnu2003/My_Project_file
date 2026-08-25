@@ -1,0 +1,124 @@
+#include "adc.h"
+#include "spi.h"
+#include "config.h"
+
+/*
+ * MCP3204 ADC
+ *
+ * MCP3204:
+ * 12-bit ADC
+ * 4 single-ended channels
+ *
+ * Channels:
+ * CH0 -> LM35
+ * CH1 -> Rain Sensor
+ * CH2 -> Soil Moisture
+ * CH3 -> LDR
+ */
+
+
+/* ---------------------------------------------------------
+   ADC Initialization
+   --------------------------------------------------------- */
+
+void ADC_Init(void)
+{
+    /*
+     * MCP3204 does not need a separate initialization
+     * command.
+     *
+     * SPI must be initialized before using the ADC.
+     */
+    SPI_Init();
+}
+
+
+/* ---------------------------------------------------------
+   Read MCP3204 ADC Channel
+   --------------------------------------------------------- */
+
+unsigned int MCP3204_Read(unsigned char channel)
+{
+    unsigned char tx;
+    unsigned char highByte;
+    unsigned char lowByte;
+
+    unsigned int adcValue;
+
+
+    /* Check valid channel */
+
+    if (channel > 3)
+    {
+        return 0;
+    }
+
+
+    /*
+     * MCP3204 SPI command
+     *
+     * First byte:
+     *
+     * Bit 2 = Start
+     * Bit 1 = Single-ended
+     * Bit 0 = Channel MSB
+     *
+     * For single-ended operation:
+     *
+     * 00000110 | ((channel & 0x04) >> 2)
+     *
+     * Since MCP3204 has channels 0-3,
+     * channel MSB is normally 0.
+     */
+
+
+    /* Select MCP3204 */
+
+    SPI_CS_Low();
+
+
+    /* Send start + single-ended command */
+
+    tx = 0x06 | ((channel & 0x04) >> 2);
+
+    SPI_Write(tx);
+
+
+    /*
+     * Send channel selection.
+     *
+     * Bits 7 and 6 contain channel information.
+     */
+
+    tx = (channel & 0x03) << 6;
+
+    highByte = SPI_Write(tx);
+
+
+    /*
+     * Read remaining 8 bits
+     */
+
+    lowByte = SPI_Write(0x00);
+
+
+    /* Deselect MCP3204 */
+
+    SPI_CS_High();
+
+
+    /*
+     * MCP3204 output:
+     *
+     *             12-bit ADC value
+     *
+     * highByte = XXXX D11 D10 D9 D8
+     * lowByte  = D7 D6 D5 D4 D3 D2 D1 D0
+     *
+     */
+
+    adcValue = ((highByte & 0x0F) << 8) | lowByte;
+
+
+    return adcValue;
+}
