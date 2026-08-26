@@ -1,0 +1,196 @@
+#include "sensor.h"
+#include "adc.h"
+#include "config.h"
+#include "lcd.h"
+#include "timer.h"
+
+
+/* =========================================================
+   LM35 TEMPERATURE SENSOR
+
+   LM35 output:
+   10 mV / degree Celsius
+
+   Example:
+   0.30 V = 30 degrees C
+
+   ADC voltage:
+   Voltage = ADC_Value * VREF / 4095
+
+   Temperature:
+   Temperature = Voltage * 100
+   ========================================================= */
+
+float Read_Temperature(void)
+{
+    unsigned int adcValue;
+    float voltage;
+    float temperature;
+
+    adcValue = MCP3204_Read(TEMP_CHANNEL);
+
+    voltage = ((float)adcValue * ADC_VREF)
+              / ADC_MAX_VALUE;
+
+    temperature = voltage * 100.0f;
+
+    return temperature;
+}
+
+
+
+
+/* =========================================================
+   SOIL MOISTURE SENSOR
+
+   MCP3204 CH2 -> Soil moisture sensor
+
+   Higher ADC value = more moisture
+   ========================================================= */
+
+unsigned int Read_SoilMoisture(void)
+{
+    unsigned int adcValue;
+    unsigned int moisture;
+
+    adcValue = MCP3204_Read(SOIL_CHANNEL);
+
+    /*
+     * Soil sensor calibration
+     *
+     * Change these two values after testing:
+     * DRY_ADC = raw value in dry soil
+     * WET_ADC = raw value in fully wet soil
+     */
+
+    #define SOIL_DRY_ADC  1100
+    #define SOIL_WET_ADC  200
+
+    /* Very wet */
+    if (adcValue <= SOIL_WET_ADC)
+    {
+        moisture = 100;
+    }
+    /* Very dry */
+    else if (adcValue >= SOIL_DRY_ADC)
+    {
+        moisture = 0;
+    }
+    /* Between wet and dry */
+    else
+    {
+        moisture =
+            ((SOIL_DRY_ADC - adcValue) * 100UL) /
+            (SOIL_DRY_ADC - SOIL_WET_ADC);
+    }
+
+    return moisture;
+}
+
+
+/* =========================================================
+   RAIN SENSOR
+
+   MCP3204 CH1 -> Rain sensor
+   ========================================================= */
+
+unsigned int Read_RainSensor(void)
+{
+    if ((IO0PIN & (1 << IR_SENSOR_PIN)) == 0)
+    {
+        return 1;       /* Rain detected */
+    }
+    else
+    {
+        return 0;       /* No rain */
+    }
+}
+
+
+/* =========================================================
+   LDR / LIGHT SENSOR
+
+   MCP3204 CH3 -> LDR
+
+   Higher ADC value = brighter light
+   ========================================================= */
+
+unsigned int Read_Light(void)
+{
+    unsigned int adcValue;
+    unsigned int light;
+
+    /* Read MCP3204 channel 3 */
+    adcValue = MCP3204_Read(LDR_CHANNEL);
+
+    /* Convert ADC reading to percentage */
+    light = (adcValue * 100UL) / 4095UL;
+
+    if (light > 100)
+    {
+        light = 100;
+    }
+
+    return light;
+}
+
+
+/* =========================================================
+   DISPLAY SENSOR DATA
+   ========================================================= */
+
+void Display_SensorData(SensorData *data)
+{
+    /* =====================================================
+       SCREEN 1
+
+       TEMP:32.50C
+       SOIL:65%
+       ===================================================== */
+
+    LCD_Clear();
+
+    LCD_String("TEMP:");
+
+    LCD_PrintFloat(data->temperature);
+
+    LCD_Data('C');
+
+    LCD_SetCursor(2, 1);
+
+    LCD_String("SOIL:");
+
+    LCD_PrintNumber(data->soilMoisture);
+
+    LCD_Data('%');
+
+    /* Wait 2 seconds */
+    Timer0_Delay_ms(2000);
+
+
+    /* =====================================================
+       SCREEN 2
+
+       RAIN:45%
+       LIGHT:80%
+       ===================================================== */
+
+    LCD_Clear();
+
+    LCD_String("RAIN:");
+
+    LCD_PrintNumber(data->rainfall);
+
+    LCD_Data('%');
+
+    LCD_SetCursor(2, 1);
+
+    LCD_String("LIGHT:");
+
+    LCD_PrintNumber(data->light);
+
+    LCD_Data('%');
+
+    /* Wait 2 seconds */
+    Timer0_Delay_ms(2000);
+}
