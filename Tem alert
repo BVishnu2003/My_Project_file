@@ -1,0 +1,21 @@
+if (temperature >= TEMP_HIGH_LIMIT)
+{
+    LED_HIGH();
+    BUZZER_HIGH();
+
+    if (temp_alert_sent == 0)
+    {
+        /* Your existing SMS-building code here */
+
+        GSM_SEND_SMS(sms_msg);
+
+        temp_alert_sent = 1;
+    }
+}
+else if (temperature <= TEMP_RESET_LIMIT)
+{
+    LED_LOW();
+    BUZZER_LOW();
+
+    temp_alert_sent = 0;
+}
